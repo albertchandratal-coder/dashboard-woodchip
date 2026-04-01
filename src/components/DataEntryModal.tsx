@@ -9,6 +9,8 @@ export function DataEntryModal({
   onSave, 
   onClearHistory,
   data, 
+  sessionHistory,
+  setSessionHistory,
   supirPlat, setSupirPlat,
   mesinOptions, setMesinOptions,
   teamGilingOptions, setTeamGilingOptions,
@@ -18,6 +20,8 @@ export function DataEntryModal({
   onSave: (data: DeliveryData | DeliveryData[]) => void, 
   onClearHistory: () => void,
   data: DeliveryData[],
+  sessionHistory: DeliveryData[],
+  setSessionHistory: React.Dispatch<React.SetStateAction<DeliveryData[]>>,
   supirPlat: Record<string, string>, setSupirPlat: React.Dispatch<React.SetStateAction<Record<string, string>>>,
   mesinOptions: string[], setMesinOptions: React.Dispatch<React.SetStateAction<string[]>>,
   teamGilingOptions: string[], setTeamGilingOptions: React.Dispatch<React.SetStateAction<string[]>>,
@@ -216,8 +220,8 @@ export function DataEntryModal({
   };
 
   const recentHistory = useMemo(() => {
-    return [...data].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 10);
-  }, [data]);
+    return [...sessionHistory].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 10);
+  }, [sessionHistory]);
 
   return (
     <div className="fixed inset-0 bg-[#0B1120]/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">

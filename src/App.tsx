@@ -15,6 +15,7 @@ import { MESIN_OPTIONS, TEAM_GILING_OPTIONS, KONTRAKTOR_OPTIONS, SUPIR_PLAT_MAPP
 
 export default function App() {
   const [data, setData] = useState<DeliveryData[]>([]);
+  const [sessionHistory, setSessionHistory] = useState<DeliveryData[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -171,7 +172,9 @@ export default function App() {
         <DataEntryModal 
           onClose={() => setIsModalOpen(false)} 
           data={data}
-          onClearHistory={() => setData([])}
+          sessionHistory={sessionHistory}
+          setSessionHistory={setSessionHistory}
+          onClearHistory={() => setSessionHistory([])}
           supirPlat={supirPlat} setSupirPlat={setSupirPlat}
           mesinOptions={mesinOptions} setMesinOptions={setMesinOptions}
           teamGilingOptions={teamGilingOptions} setTeamGilingOptions={setTeamGilingOptions}
@@ -180,6 +183,10 @@ export default function App() {
             // Optimistic update
             const updatedData = Array.isArray(newData) ? [...data, ...newData] : [...data, newData];
             setData(updatedData);
+            
+            // Add to session history
+            const newHistory = Array.isArray(newData) ? newData : [newData];
+            setSessionHistory(prev => [...newHistory, ...prev]);
             
             // Save to AppScript
             const success = await saveData(newData);
