@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { DeliveryData } from '../types';
 import { formatNumber, cn } from '../lib/utils';
 import { format, parseISO } from 'date-fns';
@@ -56,15 +58,19 @@ export function Tables({ data, year, month }: { data: DeliveryData[], year: stri
   }, [data]);
 
   const teamGilingData = useMemo(() => {
+    console.log('DEBUG: teamGilingData data length:', data.length);
     const grouped = data.reduce((acc, item) => {
-      if (!item.teamGiling) return acc; // Skip items with missing teamGiling
-      
-      const key = item.teamGiling;
+      // Log the value of teamGiling for each item
+      if (item.tanggal.includes('2026-01')) {
+        console.log('DEBUG: Jan 2026 item teamGiling:', item.teamGiling);
+      }
+      const key = item.teamGiling || 'Tidak Diketahui';
       if (!acc[key]) acc[key] = { name: key, trip: 0, netto: 0 };
       acc[key].trip += 1;
       acc[key].netto += item.netto;
       return acc;
     }, {} as Record<string, any>);
+    console.log('DEBUG: teamGilingData grouped:', grouped);
     const totalNetto = data.reduce((sum, item) => sum + item.netto, 0);
     return Object.values(grouped).map(t => ({ ...t, avg: t.netto / t.trip, percent: totalNetto ? (t.netto / totalNetto) * 100 : 0 })).sort((a, b) => b.netto - a.netto);
   }, [data]);
@@ -270,64 +276,153 @@ export function Tables({ data, year, month }: { data: DeliveryData[], year: stri
       <td className="py-4 px-2 text-center font-bold text-white text-[14px]">{formatNumber(grandTotalBruto)}</td>
       <td className="py-4 px-2 text-center font-bold text-white text-[14px]">{formatNumber(grandTotalTara)}</td>
       <td className="py-4 px-2 text-center font-bold text-white text-[14px]">
-        {formatNumber(grandTotalNetto)} <span className="text-green-400 ml-1">({(grandTotalNetto / 1000).toFixed(2)} Ton)</span>
+        {formatNumber(grandTotalNetto)} <span className="text-green-400 print:text-orange-500 ml-1">({(grandTotalNetto / 1000).toFixed(2)} Ton)</span>
       </td>
       <td colSpan={4}></td>
     </tr>
   );
 
   return (
-    <div className="grid grid-cols-1 gap-6 print:gap-4">
+    <div className="grid grid-cols-1 gap-6 print:block print:space-y-6">
+        {/* REKAP PER BULAN */}
         <BlockCard title="REKAP PER BULAN" icon={<TrendingUp size={14} />}>
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left whitespace-nowrap">
               <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
                 <tr>
-                  <th className="py-3 px-4 font-semibold">BULAN</th>
+                  <th className="py-3 px-4 font-semibold text-center">BULAN</th>
                   <th className="py-3 px-4 font-semibold text-center">TRIP</th>
-                  <th className="py-3 px-4 font-semibold text-center">HARI</th>
-                  <th className="py-3 px-4 font-semibold text-right">NETTO (KG)</th>
-                  <th className="py-3 px-4 font-semibold text-right">TON</th>
-                  <th className="py-3 px-4 font-semibold text-right">AVG/TRIP</th>
-                  <th className="py-3 px-4 font-semibold text-right">PROGRESS (TARGET 1000 TON)</th>
+                  <th className="py-3 px-4 font-semibold text-center">NETTO (KG)</th>
+                  <th className="py-3 px-4 font-semibold text-center">TON</th>
+                  <th className="py-3 px-4 font-semibold text-center">AVG/TRIP</th>
+                  <th className="py-3 px-4 font-semibold text-center">PROGRESS</th>
+                  <th className="py-3 px-4 font-semibold text-center">%</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {rekapBulanData.map((m, index) => (
-                  <tr key={`${m.name}-${index}`} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-slate-300 capitalize">{m.name}</td>
+                {rekapBulanData.map((m) => (
+                  <tr key={m.sortKey} className="hover:bg-slate-800/50 transition-colors">
+                    <td className="py-3 px-4 font-medium text-slate-300 text-center">{m.name}</td>
                     <td className="py-3 px-4 text-center text-slate-400">{m.trip}</td>
-                    <td className="py-3 px-4 text-center text-slate-400">{m.daysCount}</td>
-                    <td className="py-3 px-4 text-right font-bold text-blue-400">{formatNumber(m.netto)}</td>
-                    <td className="py-3 px-4 text-right text-green-400">{m.ton.toFixed(2)}</td>
-                    <td className="py-3 px-4 text-right text-slate-400">{formatNumber(Math.round(m.avg))}</td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="w-40 h-2 bg-slate-700 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${
-                              (m.ton / 1000) * 100 < 50 ? 'bg-red-500' : 'bg-blue-500'
-                            }`} 
-                            style={{ width: `${Math.min((m.ton / 1000) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                        <span className={`text-[10px] w-12 ${(m.ton / 1000) * 100 < 50 ? 'text-red-400 font-bold' : 'text-slate-500'}`}>
-                          {(m.ton / 1000 * 100).toFixed(1)}%
-                        </span>
+                    <td className="py-3 px-4 text-center font-bold text-blue-400">{formatNumber(m.netto)}</td>
+                    <td className="py-3 px-4 text-center text-green-400 print:text-orange-500">{m.ton.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-center text-slate-400">{formatNumber(Math.round(m.avg))}</td>
+                    <td className="py-3 px-4 text-center">
+                      <div className="w-39 h-2 bg-slate-700 rounded-full overflow-hidden print-progress-bar mx-auto">
+                        <div 
+                          className={`h-full rounded-full ${
+                            (m.ton / 1000) * 100 < 50 ? 'bg-red-500' : 'bg-blue-500'
+                          }`} 
+                          style={{ width: `${Math.min((m.ton / 1000) * 100, 100)}%` }}
+                        ></div>
                       </div>
                     </td>
+                    <td className="py-3 px-4 text-center text-slate-500">{m.percent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
-                <tr>
-                  <td className="py-3 px-4">TOTAL</td>
+                <tr className="print-footer-total">
+                  <td className="py-3 px-4 text-center">TOTAL</td>
                   <td className="py-3 px-4 text-center">{rekapBulanTotals.trip}</td>
-                  <td className="py-3 px-4 text-center">{rekapBulanTotals.daysCount}</td>
-                  <td className="py-3 px-4 text-right">{formatNumber(rekapBulanTotals.netto)}</td>
-                  <td className="py-3 px-4 text-right">{rekapBulanTotals.ton.toFixed(2)}</td>
-                  <td className="py-3 px-4"></td>
-                  <td className="py-3 px-4"></td>
+                  <td className="py-3 px-4 text-center">{formatNumber(rekapBulanTotals.netto)}</td>
+                  <td className="py-3 px-4 text-center print:text-orange-500">{rekapBulanTotals.ton.toFixed(2)}</td>
+                  <td className="py-3 px-4 text-center"></td>
+                  <td className="py-3 px-4 text-center"></td>
+                  <td className="py-3 px-4 text-center"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </BlockCard>
+
+        {/* REKAP SUPIR PER BULAN */}
+        <BlockCard title="REKAP SUPIR PER BULAN" icon={<TrendingUp size={14} />}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left whitespace-nowrap">
+              <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
+                <tr>
+                  <th className="py-3 px-4 font-semibold text-center">SUPIR</th>
+                  {year === 'Semua Tahun' && month === 'Semua Bulan' ? (
+                    <>
+                      {supirBulanData.months.map((m, index) => (
+                        <th key={`${m}-${index}`} className="py-3 px-4 font-semibold text-center">{m.toUpperCase()}</th>
+                      ))}
+                      <th className="py-3 px-4 font-semibold text-center">TOTAL</th>
+                    </>
+                  ) : (
+                    <th className="py-3 px-4 font-semibold text-center">TOTAL</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {year === 'Semua Tahun' && month === 'Semua Bulan' ? (
+                  supirBulanData.rows.map((row) => (
+                    <tr key={row.name} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="py-3 px-4 font-medium text-slate-300 text-center">{row.name}</td>
+                      {supirBulanData.months.map((m, index) => (
+                        <td key={`${row.name}-${m}-${index}`} className="py-3 px-4 text-center text-slate-400">{formatNumber(row[m])}</td>
+                      ))}
+                      <td className="py-3 px-4 text-center font-bold text-blue-400">{formatNumber(row.total)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  supirData.map((s) => (
+                    <tr key={s.name} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="py-3 px-4 font-medium text-slate-300 text-center">{s.name}</td>
+                      <td className="py-3 px-4 text-center font-bold text-blue-400">{formatNumber(s.netto)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
+                <tr className="print-footer-total">
+                  <td className="py-3 px-4 text-center">TOTAL</td>
+                  {year === 'Semua Tahun' && month === 'Semua Bulan' ? (
+                    <>
+                      {supirBulanData.months.map(m => <td key={m} className="py-3 px-4 text-center">{formatNumber(supirBulanTotals[m])}</td>)}
+                      <td className="py-3 px-4 text-center">{formatNumber(supirBulanTotals.total)}</td>
+                    </>
+                  ) : (
+                    <td className="py-3 px-4 text-center">{formatNumber(supirTotals.netto)}</td>
+                  )}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </BlockCard>
+
+        {/* TOP 10 HARI TERBANYAK */}
+        <BlockCard title="TOP 10 HARI TERBANYAK" icon={<Trophy size={14} />}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left whitespace-nowrap">
+              <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
+                <tr>
+                  <th className="py-3 px-4 font-semibold text-center">TANGGAL</th>
+                  <th className="py-3 px-4 font-semibold text-center">TRIP</th>
+                  <th className="py-3 px-4 font-semibold text-center">NETTO (KG)</th>
+                  <th className="py-3 px-4 font-semibold text-center">TON</th>
+                  <th className="py-3 px-4 font-semibold text-center">SUPIR TERLIBAT</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {top10Days.map((d) => (
+                  <tr key={d.tanggal} className="hover:bg-slate-800/50 transition-colors">
+                    <td className="py-3 px-4 font-medium text-slate-300 text-center">{format(parseISO(d.tanggal), 'dd/MM/yyyy')}</td>
+                    <td className="py-3 px-4 text-center text-slate-400">{d.trip}</td>
+                    <td className="py-3 px-4 text-center font-bold text-blue-400">{formatNumber(d.netto)}</td>
+                    <td className="py-3 px-4 text-center text-green-400 print:text-orange-500">{d.ton.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-slate-500 italic text-center">{d.mainSupir}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
+                <tr className="print-footer-total">
+                  <td className="py-3 px-4 text-center">TOTAL</td>
+                  <td className="py-3 px-4 text-center">{top10Totals.trip}</td>
+                  <td className="py-3 px-4 text-center">{formatNumber(top10Totals.netto)}</td>
+                  <td className="py-3 px-4 text-center print:text-orange-500">{top10Totals.ton.toFixed(2)}</td>
+                  <td className="py-3 px-4 text-center"></td>
                 </tr>
               </tfoot>
             </table>
@@ -340,104 +435,66 @@ export function Tables({ data, year, month }: { data: DeliveryData[], year: stri
             <table className="w-full text-xs text-left whitespace-nowrap">
               <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
                 <tr>
-                  <th className="py-3 px-4 font-semibold">NAMA SUPIR</th>
-                  <th className="py-3 px-4 font-semibold">PLAT</th>
+                  <th className="py-3 px-4 font-semibold text-center">NAMA SUPIR</th>
+                  <th className="py-3 px-4 font-semibold text-center">PLAT</th>
                   <th className="py-3 px-4 font-semibold text-center">TRIP</th>
-                  <th className="py-3 px-4 font-semibold text-right">NETTO (KG)</th>
-                  <th className="py-3 px-4 font-semibold text-right">AVG/TRIP</th>
-                  <th className="py-3 px-4 font-semibold text-right">%</th>
+                  <th className="py-3 px-4 font-semibold text-center">NETTO (KG)</th>
+                  <th className="py-3 px-4 font-semibold text-center">AVG/TRIP</th>
+                  <th className="py-3 px-4 font-semibold text-center">%</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {supirData.map((s) => (
                   <tr key={s.name} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-slate-300">{s.name}</td>
-                    <td className="py-3 px-4 text-slate-500">{s.plat}</td>
+                    <td className="py-3 px-4 font-medium text-slate-300 text-center">{s.name}</td>
+                    <td className="py-3 px-4 text-slate-500 text-center">{s.plat}</td>
                     <td className="py-3 px-4 text-center text-slate-400">{s.trip}</td>
-                    <td className="py-3 px-4 text-right font-bold text-blue-400">{formatNumber(s.netto)}</td>
-                    <td className="py-3 px-4 text-right text-slate-400">{formatNumber(Math.round(s.avg))}</td>
-                    <td className="py-3 px-4 text-right text-slate-500">{s.percent.toFixed(1)}%</td>
+                    <td className="py-3 px-4 text-center font-bold text-blue-400">{formatNumber(s.netto)}</td>
+                    <td className="py-3 px-4 text-center text-slate-400">{formatNumber(Math.round(s.avg))}</td>
+                    <td className="py-3 px-4 text-center text-slate-500">{s.percent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
-                <tr>
-                  <td className="py-3 px-4" colSpan={2}>TOTAL</td>
+                <tr className="print-footer-total">
+                  <td className="py-3 px-4 text-center" colSpan={2}>TOTAL</td>
                   <td className="py-3 px-4 text-center">{supirTotals.trip}</td>
-                  <td className="py-3 px-4 text-right">{formatNumber(supirTotals.netto)}</td>
-                  <td className="py-3 px-4"></td>
-                  <td className="py-3 px-4"></td>
+                  <td className="py-3 px-4 text-center">{formatNumber(supirTotals.netto)}</td>
+                  <td className="py-3 px-4 text-center"></td>
+                  <td className="py-3 px-4 text-center"></td>
                 </tr>
               </tfoot>
             </table>
           </div>
         </BlockCard>
 
-        <BlockCard title="TOP 10 HARI TERBANYAK" icon={<Trophy size={14} />}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left whitespace-nowrap">
-              <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
-                <tr>
-                  <th className="py-3 px-4 font-semibold">TANGGAL</th>
-                  <th className="py-3 px-4 font-semibold text-center">TRIP</th>
-                  <th className="py-3 px-4 font-semibold text-right">NETTO (KG)</th>
-                  <th className="py-3 px-4 font-semibold text-right">TON</th>
-                  <th className="py-3 px-4 font-semibold">SUPIR TERLIBAT</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {top10Days.map((d) => (
-                  <tr key={d.tanggal} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-slate-300">{format(parseISO(d.tanggal), 'dd/MM/yyyy')}</td>
-                    <td className="py-3 px-4 text-center text-slate-400">{d.trip}</td>
-                    <td className="py-3 px-4 text-right font-bold text-blue-400">{formatNumber(d.netto)}</td>
-                    <td className="py-3 px-4 text-right text-green-400">{d.ton.toFixed(2)}</td>
-                    <td className="py-3 px-4 text-slate-500 italic">{d.mainSupir}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
-                <tr>
-                  <td className="py-3 px-4">TOTAL</td>
-                  <td className="py-3 px-4 text-center">{top10Totals.trip}</td>
-                  <td className="py-3 px-4 text-right">{formatNumber(top10Totals.netto)}</td>
-                  <td className="py-3 px-4 text-right">{top10Totals.ton.toFixed(2)}</td>
-                  <td className="py-3 px-4"></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </BlockCard>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:grid-cols-3">
         <BlockCard title="REKAP PER MESIN" icon={<Settings size={14} />}>
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left whitespace-nowrap">
               <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
                 <tr>
-                  <th className="py-3 px-4 font-semibold">MESIN</th>
+                  <th className="py-3 px-4 font-semibold text-center">MESIN</th>
                   <th className="py-3 px-4 font-semibold text-center">TRIP</th>
-                  <th className="py-3 px-4 font-semibold text-right">NETTO (KG)</th>
-                  <th className="py-3 px-4 font-semibold text-right">%</th>
+                  <th className="py-3 px-4 font-semibold text-center">NETTO (KG)</th>
+                  <th className="py-3 px-4 font-semibold text-center">%</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {mesinData.map((m) => (
                   <tr key={m.name} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-slate-300">{m.name}</td>
+                    <td className="py-3 px-4 font-medium text-slate-300 text-center">{m.name}</td>
                     <td className="py-3 px-4 text-center text-slate-400">{m.trip}</td>
-                    <td className="py-3 px-4 text-right font-bold text-blue-400">{formatNumber(m.netto)}</td>
-                    <td className="py-3 px-4 text-right text-slate-500">{m.percent.toFixed(1)}%</td>
+                    <td className="py-3 px-4 text-center font-bold text-blue-400">{formatNumber(m.netto)}</td>
+                    <td className="py-3 px-4 text-center text-slate-500">{m.percent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
-                <tr>
-                  <td className="py-3 px-4">TOTAL</td>
+                <tr className="print-footer-total">
+                  <td className="py-3 px-4 text-center">TOTAL</td>
                   <td className="py-3 px-4 text-center">{mesinTotals.trip}</td>
-                  <td className="py-3 px-4 text-right">{formatNumber(mesinTotals.netto)}</td>
-                  <td className="py-3 px-4"></td>
+                  <td className="py-3 px-4 text-center">{formatNumber(mesinTotals.netto)}</td>
+                  <td className="py-3 px-4 text-center"></td>
                 </tr>
               </tfoot>
             </table>
@@ -449,28 +506,28 @@ export function Tables({ data, year, month }: { data: DeliveryData[], year: stri
             <table className="w-full text-xs text-left whitespace-nowrap">
               <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
                 <tr>
-                  <th className="py-3 px-4 font-semibold">TEAM</th>
+                  <th className="py-3 px-4 font-semibold text-center">TEAM</th>
                   <th className="py-3 px-4 font-semibold text-center">TRIP</th>
-                  <th className="py-3 px-4 font-semibold text-right">NETTO (KG)</th>
-                  <th className="py-3 px-4 font-semibold text-right">%</th>
+                  <th className="py-3 px-4 font-semibold text-center">NETTO (KG)</th>
+                  <th className="py-3 px-4 font-semibold text-center">%</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {teamGilingData.map((t) => (
                   <tr key={t.name} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-slate-300">{t.name}</td>
+                    <td className="py-3 px-4 font-medium text-slate-300 text-center">{t.name}</td>
                     <td className="py-3 px-4 text-center text-slate-400">{t.trip}</td>
-                    <td className="py-3 px-4 text-right font-bold text-blue-400">{formatNumber(t.netto)}</td>
-                    <td className="py-3 px-4 text-right text-slate-500">{t.percent.toFixed(1)}%</td>
+                    <td className="py-3 px-4 text-center font-bold text-blue-400">{formatNumber(t.netto)}</td>
+                    <td className="py-3 px-4 text-center text-slate-500">{t.percent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
-                <tr>
-                  <td className="py-3 px-4">TOTAL</td>
+                <tr className="print-footer-total">
+                  <td className="py-3 px-4 text-center">TOTAL</td>
                   <td className="py-3 px-4 text-center">{teamGilingTotals.trip}</td>
-                  <td className="py-3 px-4 text-right">{formatNumber(teamGilingTotals.netto)}</td>
-                  <td className="py-3 px-4"></td>
+                  <td className="py-3 px-4 text-center">{formatNumber(teamGilingTotals.netto)}</td>
+                  <td className="py-3 px-4 text-center"></td>
                 </tr>
               </tfoot>
             </table>
@@ -482,28 +539,28 @@ export function Tables({ data, year, month }: { data: DeliveryData[], year: stri
             <table className="w-full text-xs text-left whitespace-nowrap">
               <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
                 <tr>
-                  <th className="py-3 px-4 font-semibold">KONTRAKTOR</th>
+                  <th className="py-3 px-4 font-semibold text-center">KONTRAKTOR</th>
                   <th className="py-3 px-4 font-semibold text-center">TRIP</th>
-                  <th className="py-3 px-4 font-semibold text-right">NETTO (KG)</th>
-                  <th className="py-3 px-4 font-semibold text-right">%</th>
+                  <th className="py-3 px-4 font-semibold text-center">NETTO (KG)</th>
+                  <th className="py-3 px-4 font-semibold text-center">%</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {kontraktorData.map((k) => (
                   <tr key={k.name} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-slate-300">{k.name}</td>
+                    <td className="py-3 px-4 font-medium text-slate-300 text-center">{k.name}</td>
                     <td className="py-3 px-4 text-center text-slate-400">{k.trip}</td>
-                    <td className="py-3 px-4 text-right font-bold text-blue-400">{formatNumber(k.netto)}</td>
-                    <td className="py-3 px-4 text-right text-slate-500">{k.percent.toFixed(1)}%</td>
+                    <td className="py-3 px-4 text-center font-bold text-blue-400">{formatNumber(k.netto)}</td>
+                    <td className="py-3 px-4 text-center text-slate-500">{k.percent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
-                <tr>
-                  <td className="py-3 px-4">TOTAL</td>
+                <tr className="print-footer-total">
+                  <td className="py-3 px-4 text-center">TOTAL</td>
                   <td className="py-3 px-4 text-center">{kontraktorTotals.trip}</td>
-                  <td className="py-3 px-4 text-right">{formatNumber(kontraktorTotals.netto)}</td>
-                  <td className="py-3 px-4"></td>
+                  <td className="py-3 px-4 text-center">{formatNumber(kontraktorTotals.netto)}</td>
+                  <td className="py-3 px-4 text-center"></td>
                 </tr>
               </tfoot>
             </table>
@@ -511,39 +568,6 @@ export function Tables({ data, year, month }: { data: DeliveryData[], year: stri
         </BlockCard>
       </div>
 
-      <BlockCard title="REKAP SUPIR PER BULAN" icon={<BarChart3 size={14} />}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left whitespace-nowrap">
-            <thead className="text-slate-500 border-b border-slate-800 bg-[#0B1120]">
-              <tr>
-                <th className="py-3 px-4 font-semibold">NAMA SUPIR</th>
-                {supirBulanData.months.map((m, index) => (
-                  <th key={`${m}-${index}`} className="py-3 px-4 font-semibold text-right">{m.toUpperCase()}</th>
-                ))}
-                <th className="py-3 px-4 font-semibold text-right">TOTAL</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {supirBulanData.rows.map((row) => (
-                <tr key={row.name} className="hover:bg-slate-800/50 transition-colors">
-                  <td className="py-3 px-4 font-medium text-slate-300">{row.name}</td>
-                  {supirBulanData.months.map((m, index) => (
-                    <td key={`${row.name}-${m}-${index}`} className="py-3 px-4 text-right text-slate-400">{formatNumber(row[m])}</td>
-                  ))}
-                  <td className="py-3 px-4 text-right font-bold text-blue-400">{formatNumber(row.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="bg-[#0B1120] border-t-2 border-slate-700 font-bold hidden print:table-footer-group">
-              <tr>
-                <td className="py-3 px-4">TOTAL</td>
-                {supirBulanData.months.map(m => <td key={m} className="py-3 px-4 text-right">{formatNumber(supirBulanTotals[m])}</td>)}
-                <td className="py-3 px-4 text-right">{formatNumber(supirBulanTotals.total)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </BlockCard>
       
       {showDetail && (
         <div className="print:col-span-1">
@@ -586,19 +610,31 @@ export function BlockCard({ title, subtitle, icon, children }: { title: string, 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (cardRef.current) {
-      document.body.classList.add('printing-section');
-      cardRef.current.classList.add('print-only-section');
+      const isAndroid = /Android/i.test(navigator.userAgent);
       
-      // Increased delay to ensure charts and styles are fully rendered
-      setTimeout(() => {
-        window.print();
-        document.body.classList.remove('printing-section');
-        if (cardRef.current) {
-          cardRef.current.classList.remove('print-only-section');
-        }
-      }, 500);
+      if (!isAndroid) {
+        document.body.classList.add('printing-section');
+        cardRef.current.classList.add('print-only-section');
+        
+        setTimeout(() => {
+          window.print();
+          document.body.classList.remove('printing-section');
+          if (cardRef.current) {
+            cardRef.current.classList.remove('print-only-section');
+          }
+        }, 500);
+      } else {
+        // PDF generation for Android
+        const canvas = await html2canvas(cardRef.current, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${title}.pdf`);
+      }
     }
   };
 

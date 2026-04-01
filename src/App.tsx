@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FilterBar } from './components/FilterBar';
 import { SummaryCards } from './components/SummaryCards';
-import { Charts } from './components/Charts';
+
 import { Tables } from './components/Tables';
 import { DataEntryModal } from './components/DataEntryModal';
 import { DeliveryData } from './types';
@@ -90,7 +90,7 @@ export default function App() {
       'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
-    const sortedMonths = Array.from(months).sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
+    const sortedMonths = monthOrder;
 
     return { availableYears: sortedYears, availableMonths: sortedMonths };
   }, [data]);
@@ -99,7 +99,10 @@ export default function App() {
   const filteredData = useMemo(() => {
     return data.filter(item => {
       const date = parseISO(item.tanggal);
-      if (!isValid(date)) return false;
+      if (!isValid(date)) {
+        console.log('DEBUG: Invalid date:', item.tanggal);
+        return false;
+      }
       
       const itemYear = date.getFullYear().toString();
       const itemMonth = format(date, 'MMMM', { locale: id });
@@ -111,7 +114,11 @@ export default function App() {
       const startMatch = !startDate || item.tanggal >= startDate;
       const endMatch = !endDate || item.tanggal <= endDate;
       
-      return yearMatch && monthMatch && startMatch && endMatch;
+      const match = yearMatch && monthMatch && startMatch && endMatch;
+      if (!match) {
+        // console.log('DEBUG: Item filtered out:', item.tanggal, itemYear, itemMonth, year, month);
+      }
+      return match;
     });
   }, [data, year, month, startDate, endDate]);
 
@@ -163,8 +170,6 @@ export default function App() {
 
         <SummaryCards data={filteredData} />
         
-        <Charts data={filteredData} />
-
         <Tables data={filteredData} year={year} month={month} />
       </div>
 

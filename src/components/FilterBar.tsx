@@ -1,10 +1,28 @@
 import React from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { Filter, RotateCcw, Printer, Plus, Calendar } from 'lucide-react';
 
 export function FilterBar({ onAddData, year, setYear, month, setMonth, startDate, setStartDate, endDate, setEndDate, availableYears = [], availableMonths = [], onReset, recordCount = 0 }: any) {
+  const handlePrintAll = async () => {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (!isAndroid) {
+      window.print();
+    } else {
+      const canvas = await html2canvas(document.body, { scale: 1 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('dashboard.pdf');
+    }
+  };
+
   return (
     <div className="bg-[#151C2C] border border-slate-800 rounded-xl p-4 md:p-5 flex flex-col gap-4 shadow-lg print-hide">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* ... (rest of the component) */}
         <div className="flex flex-col gap-1.5">
           <label className="text-[10px] font-bold text-blue-400 tracking-wider flex items-center gap-1.5">
             <Calendar size={12} className="text-slate-400" /> TAHUN:
@@ -50,7 +68,7 @@ export function FilterBar({ onAddData, year, setYear, month, setMonth, startDate
         <button onClick={onReset} className="flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 text-slate-300 px-4 py-2.5 rounded-md text-sm font-bold tracking-wider transition-colors w-full">
           <RotateCcw size={16} /> RESET
         </button>
-        <button onClick={() => window.print()} className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-md text-sm font-bold tracking-wider transition-colors w-full">
+        <button onClick={handlePrintAll} className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-md text-sm font-bold tracking-wider transition-colors w-full">
           <Printer size={16} /> CETAK SEMUA
         </button>
         <button onClick={onAddData} className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-md text-sm font-bold tracking-wider transition-colors w-full">
