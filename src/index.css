@@ -1,0 +1,345 @@
+@import "tailwindcss";
+
+body {
+  background-color: #0B1120;
+  color: #f1f5f9;
+}
+
+.glow-card {
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.05);
+}
+.glow-card:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+/* Hide Scrollbar Globally */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+.text-glow-blue {
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+}
+
+@media print {
+  @page {
+    size: A3 portrait;
+    margin: 10mm;
+  }
+  
+  html, body {
+    height: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    background: #fcfcfc !important; /* Very light gray for a "live" feel */
+    color: black !important;
+  }
+  
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide screen-only elements */
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Printing specific section logic */
+  .print-only-section {
+    display: none;
+  }
+
+  /* Hide charts by default in global print */
+  .charts-container {
+    display: none !important;
+  }
+
+  body.printing-section .print-only-section {
+    display: block !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 99999 !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+  
+  /* When printing a specific section, we might need to show the container if it's a chart */
+  body.printing-section .charts-container {
+    display: block !important;
+  }
+
+  /* Reset shadows and filters */
+  * {
+    text-shadow: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Typography for print */
+  h1, h2, h3, h4, h5, h6, p, span, div {
+    color: black !important;
+  }
+
+  .bg-\[\#0B1120\], .bg-\[\#151C2C\], .bg-\[\#1e293b\], .bg-\[\#0f172a\] {
+    background-color: white !important;
+  }
+
+  /* Table specific print styles */
+  table {
+    width: 100% !important;
+    display: table !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    table-layout: auto !important;
+    border: none !important; /* Grid is formed by cells */
+  }
+  
+  /* Reset all potential border-interfering properties */
+  table, thead, tbody, tr, th, td {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  th, td {
+    border: 1px solid #000 !important;
+    padding: 6px 8px !important;
+    color: black !important;
+    font-size: 10px !important;
+    box-sizing: border-box !important;
+    background-clip: padding-box !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important; /* Light slate for headers */
+    font-weight: bold !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+  }
+
+  /* Subtotal row */
+  tr.print-subtotal td, tr.print-subtotal th {
+    background-color: #e0f2fe !important; /* Light blue for subtotal */
+    font-weight: bold !important;
+    color: black !important;
+    border-top: 1px solid #000 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+
+  /* Grand total row */
+  tr.print-grandtotal td, tr.print-grandtotal th {
+    background-color: #1e293b !important;
+    color: #ffff00 !important; /* Kuning hidup (Vibrant Yellow) */
+    font-weight: bold !important;
+    border: 1px solid #000 !important;
+    font-size: 12px !important; /* Increased by 2px (from 10px) */
+  }
+  tr.print-grandtotal td.text-green-400,
+  tr.print-grandtotal td span.text-green-400 {
+    color: #ffff00 !important; /* Match the yellow for consistency in total */
+  }
+
+  /* BlockCard overrides for print */
+  .print-card {
+    border: 1px solid #000 !important;
+    border-radius: 8px !important;
+    background: #fdfdfd !important;
+    margin-bottom: 20px !important;
+    page-break-inside: avoid;
+    overflow: visible !important;
+    display: block !important;
+    height: auto !important;
+  }
+  
+  .print-card-header {
+    background-color: #f1f5f9 !important;
+    border-bottom: 1px solid #000 !important;
+    color: black !important;
+    padding: 8px 12px !important;
+    font-weight: bold !important;
+    display: block !important;
+  }
+
+  .print-card-header h3 {
+    color: black !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  /* Ensure content area is visible and expands, except for charts which need fixed height */
+  .print-card > div:last-child:not(.print-chart-container) {
+    overflow: visible !important;
+    height: auto !important;
+    display: block !important;
+    padding: 4px !important;
+  }
+
+  .print-chart-container {
+    height: 400px !important;
+    min-height: 400px !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  /* Fix overlapping borders when table is inside a card */
+  .print-card table {
+    margin: 0 !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: none !important;
+  }
+
+  /* Ensure all cells have consistent 1px borders */
+  .print-card table th,
+  .print-card table td {
+    border: 1px solid #000 !important;
+    background-clip: padding-box;
+  }
+
+  /* Remove outer borders of table when inside a card to prevent double lines with card border */
+  .print-card table th:first-child,
+  .print-card table td:first-child {
+    border-left: none !important;
+  }
+
+  .print-card table th:last-child,
+  .print-card table td:last-child {
+    border-right: none !important;
+  }
+
+  .print-card table thead tr:first-child th {
+    border-top: none !important;
+  }
+
+  .print-card table tr:last-child td {
+    border-bottom: none !important;
+  }
+
+  /* Grid layout for print */
+  .print\:grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+  .print\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .print\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  /* Flex layout for print (alternative to grid for charts) */
+  .print\:flex-row {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+  }
+
+  .print\:flex-1 {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  /* Recharts specific print fixes */
+  .recharts-responsive-container {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .recharts-surface {
+    max-width: 100% !important;
+  }
+
+  /* Total row in Rekap Per Bulan */
+  tr.print-total-row {
+    background-color: #334155 !important;
+  }
+  tr.print-total-row td {
+    border: 1px solid #000 !important;
+  }
+  tr.print-total-row td.text-green-400,
+  tr.print-total-row td.print\:text-\[\#4ade80\] {
+    color: #4ade80 !important; /* Bright green */
+  }
+
+  /* Progress bar in print */
+  .print-progress-bar {
+    border: 1px solid #000 !important;
+    background-color: #e2e8f0 !important;
+  }
+  .print-progress-fill {
+    background-color: #3b82f6 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Summary Cards */
+  .print-summary-card {
+    border: 1px solid #000 !important;
+    border-radius: 8px !important;
+    background: #f8fafc !important;
+    text-align: center !important;
+    padding: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  .print-summary-title {
+    color: #1e293b !important;
+    font-size: 10px !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    margin-bottom: 4px !important;
+  }
+  .print-summary-value {
+    color: black !important;
+    font-size: 28px !important;
+    font-weight: bold !important;
+    margin: 4px 0 !important;
+  }
+  .print-summary-sub {
+    color: #475569 !important;
+    font-size: 11px !important;
+  }
+
+  /* Header specific */
+  .print-header-container {
+    display: block !important;
+    margin-bottom: 30px !important;
+  }
+  .print-header-top {
+    background-color: #fffbeb !important;
+    padding: 16px !important;
+    text-align: center !important;
+    border-top: 2px solid #000 !important;
+    border-bottom: 2px solid #000 !important;
+    border-left: none !important; /* Keep side borders hidden for main header */
+    border-right: none !important;
+  }
+  .print-header-bottom {
+    padding: 12px !important;
+    text-align: center !important;
+    border-top: 2px solid #000 !important;
+    border-bottom: 2px solid #000 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+}
