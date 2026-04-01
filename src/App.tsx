@@ -4,7 +4,6 @@ import { SummaryCards } from './components/SummaryCards';
 import { Charts } from './components/Charts';
 import { Tables } from './components/Tables';
 import { DataEntryModal } from './components/DataEntryModal';
-import { initialData } from './data/mockData';
 import { DeliveryData } from './types';
 import { format, parseISO, isValid } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -15,7 +14,7 @@ import { Toaster, toast } from 'sonner';
 import { MESIN_OPTIONS, TEAM_GILING_OPTIONS, KONTRAKTOR_OPTIONS, SUPIR_PLAT_MAPPING } from './constants';
 
 export default function App() {
-  const [data, setData] = useState<DeliveryData[]>(initialData);
+  const [data, setData] = useState<DeliveryData[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -30,8 +29,8 @@ export default function App() {
     const loadData = async () => {
       if (!import.meta.env.VITE_APPSCRIPT_URL) {
         setIsLoading(false);
-        setData(initialData);
-        toast.info('VITE_APPSCRIPT_URL belum disetel. Menggunakan data contoh.', {
+        setData([]);
+        toast.info('VITE_APPSCRIPT_URL belum disetel.', {
           description: 'Buka menu Settings > Secrets untuk menyetel URL AppScript.',
           duration: 10000,
         });
@@ -45,15 +44,14 @@ export default function App() {
           setData(remoteData);
           toast.success('Data berhasil dimuat dari Google Sheet!');
         } else {
-          // Fallback to mock data if AppScript is not set or empty
-          setData(initialData);
+          setData([]);
           if (import.meta.env.VITE_APPSCRIPT_URL) {
-            toast.info('Google Sheet kosong, menggunakan data contoh.');
+            toast.info('Google Sheet kosong.');
           }
         }
       } catch (error: any) {
         console.error('Failed to load data:', error);
-        setData(initialData);
+        setData([]);
         const errorMessage = error.message || 'Gagal memuat data dari Google Sheet.';
         toast.error(errorMessage, {
           duration: 10000,
