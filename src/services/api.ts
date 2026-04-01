@@ -37,19 +37,12 @@ export async function fetchData(): Promise<DeliveryData[]> {
     
     console.log('Fetching data from:', url.toString());
     
-    // Add a timeout to prevent hanging indefinitely
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
-    
     // The most reliable way to fetch from GAS is a "simple request"
     // No custom headers, no special cache modes.
     const response = await fetch(url.toString(), {
       method: 'GET',
-      redirect: 'follow',
-      signal: controller.signal
+      redirect: 'follow'
     });
-    
-    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -65,11 +58,6 @@ export async function fetchData(): Promise<DeliveryData[]> {
     return data;
   } catch (error: any) {
     console.error('Error fetching data from AppScript:', error);
-    
-    if (error.name === 'AbortError') {
-      const msg = 'Waktu tunggu habis (Timeout). Google Sheet terlalu lama merespons. Pastikan data tidak terlalu besar atau coba lagi nanti.';
-      throw new Error(msg);
-    }
     
     // If it's a TypeError: Failed to fetch, it's likely CORS or a wrong URL
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
