@@ -58,19 +58,13 @@ export function Tables({ data, year, month }: { data: DeliveryData[], year: stri
   }, [data]);
 
   const teamGilingData = useMemo(() => {
-    console.log('DEBUG: teamGilingData data length:', data.length);
     const grouped = data.reduce((acc, item) => {
-      // Log the value of teamGiling for each item
-      if (item.tanggal.includes('2026-01')) {
-        console.log('DEBUG: Jan 2026 item teamGiling:', item.teamGiling);
-      }
       const key = item.teamGiling || 'Tidak Diketahui';
       if (!acc[key]) acc[key] = { name: key, trip: 0, netto: 0 };
       acc[key].trip += 1;
       acc[key].netto += item.netto;
       return acc;
     }, {} as Record<string, any>);
-    console.log('DEBUG: teamGilingData grouped:', grouped);
     const totalNetto = data.reduce((sum, item) => sum + item.netto, 0);
     return Object.values(grouped).map(t => ({ ...t, avg: t.netto / t.trip, percent: totalNetto ? (t.netto / totalNetto) * 100 : 0 })).sort((a, b) => b.netto - a.netto);
   }, [data]);
